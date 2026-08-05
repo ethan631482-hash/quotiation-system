@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, CalendarDays, FileText, FolderCog, FolderOpen, History, Layers, Plus, Printer, Save, Trash2, TrendingUp, Users } from 'lucide-react'
+import { BarChart3, CalendarDays, FileText, FolderCog, History, Layers, Plus, Printer, Save, Trash2, TrendingUp, Users } from 'lucide-react'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { cn, formatCurrency, today } from './lib/utils'
@@ -22,59 +22,6 @@ const emptyQuote = () => ({
   note: '',
 })
 
-const DATA_FILE_FORMAT = 'quotation-manager-data'
-const DATA_FILE_VERSION = 1
-const HANDLE_DATABASE = 'quotation-manager'
-const HANDLE_STORE = 'settings'
-const HANDLE_KEY = 'data-file-handle'
-
-function openHandleDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = window.indexedDB.open(HANDLE_DATABASE, 1)
-    request.onupgradeneeded = () => request.result.createObjectStore(HANDLE_STORE)
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-async function getSavedFileHandle() {
-  const database = await openHandleDatabase()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(HANDLE_STORE, 'readonly')
-    const request = transaction.objectStore(HANDLE_STORE).get(HANDLE_KEY)
-    request.onsuccess = () => resolve(request.result || null)
-    request.onerror = () => reject(request.error)
-  })
-}
-
-async function saveFileHandle(handle) {
-  const database = await openHandleDatabase()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(HANDLE_STORE, 'readwrite')
-    transaction.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY)
-    transaction.oncomplete = resolve
-    transaction.onerror = () => reject(transaction.error)
-  })
-}
-
-function buildDataFile({ quotes, categories, customers }) {
-  return {
-    format: DATA_FILE_FORMAT,
-    version: DATA_FILE_VERSION,
-    updatedAt: new Date().toISOString(),
-    quotes,
-    categories,
-    customers,
-  }
-}
-
-function validateDataFile(data) {
-  if (!data || data.format !== DATA_FILE_FORMAT || !Array.isArray(data.quotes) || !Array.isArray(data.categories) || !Array.isArray(data.customers)) {
-    throw new Error('invalid data file')
-  }
-  return data
-}
-
 function Field({ label, className, children }) {
   return <label className={cn('grid gap-1.5 text-sm font-medium text-slate-700', className)}><span>{label}</span>{children}</label>
 }
@@ -88,7 +35,6 @@ function App() {
   const [customers, setCustomers] = useState(initialCustomers)
   const [customerDraft, setCustomerDraft] = useState(initialCustomers)
   const [newCustomer, setNewCustomer] = useState({ name: '', contact: '', phone: '', address: '' })
-  const [fileHandle, setFileHandle] = useState(null)
   const [activeTab, setActiveTab] = useState('edit')
   const [notice, setNotice] = useState('')
   
@@ -102,74 +48,35 @@ function App() {
     setNotice(message)
     window.setTimeout(() => setNotice(''), 3500)
   }
-  const loadDataFile = async handle => {
-    const file = await handle.getFile()
-    const data = validateDataFile(JSON.parse(await file.text()))
-    setQuotes(data.quotes)
-    setQuote(data.quotes[0] || emptyQuote())
-    setCategories(data.categories)
-    setCategoryDraft(data.categories)
-    setCustomers(data.customers)
-    setCustomerDraft(data.customers)
-    setFileHandle(handle)
-    await saveFileHandle(handle)
-  }
-  const selectDataFile = async () => {
-    if (!window.showOpenFilePicker) return showNotice('此功能需要使用 Chrome 或 Edge 瀏覽器。')
+  useEffect(() => {
+    fetch('/api/data').then(async response => {
+      if (response.status === 404) return null
+      if (!response.ok) throw new Error('load failed')
+      return response.json()
+    }).then(data => {
+      if (!data) return
+      setQuotes(data.quotes)
+      setQuote(data.quotes[0] || emptyQuote())
+      setCategories(data.categories)
+      setCategoryDraft(data.categories)
+      setCustomers(data.customers)
+      setCustomerDraft(data.customers)
+    }).catch(() => showNotice('無法讀取伺服器資料，暫時顯示預設資料。'))
+  }, [])
+  const saveData = async ({ nextQuotes = quotes, nextCategories = categories, nextCustomers = customers } = {}) => {
     try {
-      const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{ description: '報價單資料檔', accept: { 'application/json': ['.json'] } }],
+      const response = await fetch('/api/data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quotes: nextQuotes, categories: nextCategories, customers: nextCustomers }),
       })
-      await loadDataFile(handle)
-      showNotice(`已開啟資料檔：${handle.name}`)
-    } catch (error) {
-      if (error.name !== 'AbortError') showNotice('無法開啟資料檔，請確認檔案格式。')
-    }
-  }
-  const getWritableHandle = async () => {
-    if (fileHandle) return fileHandle
-    if (!window.showSaveFilePicker) {
-      showNotice('此功能需要使用 Chrome 或 Edge 瀏覽器。')
-      return null
-    }
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'quotation-data.json',
-        types: [{ description: '報價單資料檔', accept: { 'application/json': ['.json'] } }],
-      })
-      setFileHandle(handle)
-      await saveFileHandle(handle)
-      return handle
-    } catch (error) {
-      if (error.name !== 'AbortError') showNotice('無法建立資料檔。')
-      return null
-    }
-  }
-  const writeDataFile = async ({ nextQuotes = quotes, nextCategories = categories, nextCustomers = customers } = {}) => {
-    const handle = await getWritableHandle()
-    if (!handle) return false
-    try {
-      const permission = await handle.queryPermission({ mode: 'readwrite' })
-      if (permission !== 'granted' && await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') {
-        showNotice('請授權寫入資料檔。')
-        return false
-      }
-      const writable = await handle.createWritable()
-      await writable.write(`${JSON.stringify(buildDataFile({ quotes: nextQuotes, categories: nextCategories, customers: nextCustomers }), null, 2)}\n`)
-      await writable.close()
+      if (!response.ok) throw new Error('save failed')
       return true
     } catch {
-      showNotice('儲存資料檔失敗，請確認檔案權限。')
+      showNotice('儲存失敗，請確認伺服器連線與存取權限。')
       return false
     }
   }
-
-  useEffect(() => {
-    getSavedFileHandle().then(handle => {
-      if (handle) setFileHandle(handle)
-    }).catch(() => undefined)
-  }, [])
   const updateQuote = (path, value) => {
     const [group, key] = path.split('.')
     if (key) setQuote(current => ({ ...current, [group]: { ...current[group], [key]: value } }))
@@ -182,9 +89,9 @@ function App() {
 
   const saveQuote = async () => {
     const updated = [...quotes.filter(item => item.id !== quote.id), { ...quote, updatedAt: new Date().toISOString() }]
-    if (!await writeDataFile({ nextQuotes: updated })) return
+    if (!await saveData({ nextQuotes: updated })) return
     setQuotes(updated)
-    showNotice('報價單已儲存至資料檔。')
+    showNotice('報價單已儲存至伺服器。')
   }
 
   const addCategory = () => {
@@ -198,10 +105,10 @@ function App() {
     const cleaned = categoryDraft.map(category => category.trim()).filter(Boolean)
     const unique = [...new Set(cleaned)]
     if (unique.length !== cleaned.length) return showNotice('類別名稱不可重複。')
-    if (!await writeDataFile({ nextCategories: unique })) return
+    if (!await saveData({ nextCategories: unique })) return
     setCategories(unique)
     setCategoryDraft(unique)
-    showNotice('類別清單已儲存至資料檔。')
+    showNotice('類別清單已儲存至伺服器。')
   }
 
   const addCustomer = () => {
@@ -228,10 +135,10 @@ function App() {
     })).filter(c => c.name)
     const names = cleaned.map(c => c.name.toLocaleLowerCase())
     if (new Set(names).size !== names.length) return showNotice('客戶名稱不可重複。')
-    if (!await writeDataFile({ nextCustomers: cleaned })) return
+    if (!await saveData({ nextCustomers: cleaned })) return
     setCustomers(cleaned)
     setCustomerDraft(cleaned)
-    showNotice('客戶名單已儲存至資料檔。')
+    showNotice('客戶名單已儲存至伺服器。')
   }
 
   const exportCSV = (quotesToExport) => {
@@ -272,14 +179,14 @@ function App() {
 
   return <main className="min-h-screen bg-slate-100 text-slate-900">
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur print:hidden">
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5">
-        <div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><FileText size={19} /></div><div><h1 className="font-semibold tracking-tight">報價單管理</h1><p className="text-xs text-slate-500">本機儲存・快速建檔</p></div></div>
-        <div className="flex items-center gap-2"><Button variant="outline" onClick={selectDataFile}><FolderOpen size={16} />開啟資料檔</Button><Button variant="outline" onClick={newQuote}><Plus size={16} />新增報價</Button><Button variant="outline" onClick={() => window.print()}><Printer size={16} />列印</Button><Button onClick={saveQuote}><Save size={16} />儲存</Button></div>
+      <div className="mobile-header mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5">
+        <div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><FileText size={19} /></div><div><h1 className="font-semibold tracking-tight">報價單管理</h1><p className="text-xs text-slate-500">伺服器儲存・快速建檔</p></div></div>
+        <div className="flex items-center gap-2"><Button variant="outline" onClick={newQuote}><Plus size={16} />新增報價</Button><Button variant="outline" onClick={() => window.print()}><Printer size={16} />列印</Button><Button onClick={saveQuote}><Save size={16} />儲存</Button></div>
       </div>
     </header>
-    <div className="mx-auto max-w-[1440px] p-5 print:p-0">
+    <div className="mobile-page mx-auto max-w-[1440px] p-5 print:p-0">
       {notice && <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 print:hidden">{notice}</div>}
-      <div className="mb-4 flex items-center gap-2 text-xs text-slate-500 print:hidden"><FolderOpen size={14} /><span>{fileHandle ? `目前資料檔：${fileHandle.name}` : '尚未選擇資料檔；首次儲存時會建立新檔。'}</span></div>
+      <div className="mb-4 text-xs text-slate-500 print:hidden">資料會儲存至伺服器；部署後由 Vercel Blob 持久保存。</div>
       <nav className="mb-5 flex gap-1 border-b border-slate-200 print:hidden" aria-label="報價單功能">
         <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<BarChart3 size={16} />}>商務儀表板</TabButton>
         <TabButton active={activeTab === 'edit'} onClick={() => setActiveTab('edit')} icon={<FileText size={16} />}>編輯報價單</TabButton>
@@ -445,7 +352,7 @@ function Dashboard({ quotes, customers }) {
 }
 
 function TabButton({ active, onClick, icon, children }) {
-  return <button onClick={onClick} className={cn('flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium', active ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500')}>
+  return <button onClick={onClick} className={cn('flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium', active ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500')}>
     {icon}{children}
   </button>
 }

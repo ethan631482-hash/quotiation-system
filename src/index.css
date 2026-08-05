@@ -6,4 +6,114 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, textarea { font: inherit; }
+
+/* Mobile layout: keep controls legible and let data-dense tables scroll instead of shrinking. */
+@media (max-width: 639px) {
+  .mobile-header {
+    height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .mobile-header > div:first-child {
+    min-width: 0;
+  }
+
+  .mobile-header > div:first-child p {
+    display: none;
+  }
+
+  .mobile-header > div:last-child {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .mobile-header > div:last-child button {
+    width: 100%;
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+    font-size: 0.8125rem;
+    gap: 0.25rem;
+  }
+
+  .mobile-page {
+    padding: 0.75rem;
+  }
+
+  .mobile-page > nav {
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .mobile-page > nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-page > nav button {
+    flex: none;
+    min-height: 2.75rem;
+  }
+
+  .mobile-page [class~="p-5"] {
+    padding: 1rem;
+  }
+
+  .mobile-page .w-full.items-center.gap-2 {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mobile-page .w-full.items-center.gap-2 > .mr-2 {
+    margin-right: 0;
+  }
+
+  .mobile-page .w-full.items-center.gap-2 > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .mobile-page .w-full.items-center.gap-2 > div:last-child button {
+    width: 100%;
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+  }
+
+  .mobile-page .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .mobile-page .overflow-x-auto > table {
+    min-width: 45rem;
+  }
+
+  .mobile-page .divide-y > div.flex {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobile-page .divide-y > div.flex > div:last-child {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobile-page .grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-header > div:first-child h1 {
+    font-size: 0.9375rem;
+  }
+}
+
 @media print { @page { size: A4; margin: 13mm; } body { background: white; } input, textarea { border-color: transparent !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; } textarea { min-height: 3rem; } }

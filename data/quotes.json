@@ -1,0 +1,106 @@
+[
+  {
+    "id": "ebd156af-6b45-4ce4-aa07-5d927b7e5194",
+    "number": "YU-0002",
+    "status": "草稿",
+    "date": "2026-08-05",
+    "company": {
+      "name": "A公司",
+      "phone": "02-1234-5678",
+      "address": "台北市中山區南京東路三段 100 號"
+    },
+    "customer": {
+      "name": "A公司",
+      "phone": "",
+      "address": "台北市中山區南京東路三段 100 號",
+      "contact": "A公司"
+    },
+    "items": [
+      {
+        "id": "556c64d0-ff64-4e24-b21f-7d97e9f94e98",
+        "category": "固態硬碟 M.2／SSD",
+        "name": "XXX",
+        "spec": "CCC",
+        "quantity": 1,
+        "unitPrice": 0
+      }
+    ],
+    "discount": 0,
+    "taxRate": 0,
+    "deposit": 0,
+    "note": "感謝您的詢價。如有任何問題，歡迎隨時與我們聯繫。",
+    "updatedAt": "2026-08-05T18:57:48.572Z"
+  },
+  {
+    "id": "8e8afc8c-d1bc-443f-a16e-506d2fdc01d8",
+    "number": "YU-0003",
+    "status": "草稿",
+    "date": "2026-08-05",
+    "company": {
+      "name": "B公司",
+      "phone": "02-1234-5678",
+      "address": "台北市中山區南京東路三段 100 號"
+    },
+    "customer": {
+      "name": "B公司",
+      "phone": "",
+      "address": "台北市中山區南京東路三段 100 號",
+      "contact": "B公司"
+    },
+    "items": [
+      {
+        "id": "757d692d-4e38-4a7a-a401-163d0da46b80",
+        "category": "電源供應器",
+        "name": "ZZZXXX",
+        "spec": "XXX",
+        "quantity": 1,
+        "unitPrice": 0
+      }
+    ],
+    "discount": 0,
+    "taxRate": 0,
+    "deposit": 0,
+    "note": "感謝您的詢價。如有任何問題，歡迎隨時與我們聯繫。",
+    "updatedAt": "2026-08-05T18:57:57.485Z"
+  },
+  {
+    "id": "demo-quotation-001",
+    "number": "YU-0001",
+    "status": "草稿",
+    "date": "2026-08-06",
+    "company": {
+      "name": "中華龍網股份有限公司",
+      "phone": "02-1234-5678",
+      "address": "台北市中山區南京東路三段 100 號"
+    },
+    "customer": {
+      "name": "Yu Yu Cheng",
+      "phone": "0966710928",
+      "address": "東門街2",
+      "contact": ""
+    },
+    "items": [
+      {
+        "id": "item-4",
+        "category": "VGA",
+        "name": "華碩 DUAL RX9060XT",
+        "spec": "16G 顯示卡",
+        "quantity": 1,
+        "unitPrice": 12490
+      },
+      {
+        "id": "f5b8fcf0-5549-49d4-849e-3ae1a39d8e85",
+        "category": "VGA",
+        "name": "asdasd",
+        "spec": "asgasfasdf",
+        "quantity": 1,
+        "unitPrice": "5"
+      }
+    ],
+    "discount": 0,
+    "taxRate": 0,
+    "deposit": 12000,
+    "note": "已付款 12,000 元，尾款請於取貨時付清。asdasdasf",
+    "updatedAt": "2026-08-05T18:58:19.520Z"
+  }
+]

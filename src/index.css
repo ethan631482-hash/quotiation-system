@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base { html { font-family: "Noto Sans TC", "Microsoft JhengHei", ui-sans-serif, system-ui, sans-serif; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea { font: inherit; }
+@media print { @page { size: A4; margin: 13mm; } body { background: white; } input, textarea { border-color: transparent !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; } textarea { min-height: 3rem; } }

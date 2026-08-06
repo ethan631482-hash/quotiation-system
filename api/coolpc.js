@@ -58,6 +58,7 @@ export default async function handler(request, response) {
 
     const buffer = await upstream.arrayBuffer()
     const html = new TextDecoder('big5').decode(buffer)
+    console.log('CoolPC response', upstream.status, upstream.url, upstream.headers.get('content-type'), buffer.byteLength, html.slice(0, 200))
     const products = parseProducts(html)
     if (!products.length) throw new Error('No products parsed')
 

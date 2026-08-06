@@ -16,18 +16,16 @@ function decodeEntities(value) {
 
 function parseProducts(html) {
   const products = []
-  const rows = html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)
 
-  for (const rowMatch of rows) {
-    const row = rowMatch[1]
-    const selectMatch = row.match(/<select\b[^>]*\bname=["']n(\d+)["'][^>]*>([\s\S]*?)<\/select>/i)
-    if (!selectMatch) continue
+  for (const selectMatch of html.matchAll(/<select\b([^>]*)>([\s\S]*?)<\/select>/gi)) {
+    const nameMatch = selectMatch[1].match(/\bname=[\"']n(\d+)[\"']/i)
+    if (!nameMatch) continue
 
-    const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)]
-    const category = decodeEntities(cells[1]?.[1] || '') || '原價屋品項'
-    const options = selectMatch[2].matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi)
+    const beforeSelect = html.slice(Math.max(0, selectMatch.index - 12000), selectMatch.index)
+    const categoryMatches = [...beforeSelect.matchAll(/<td\b[^>]*class=[\"']t[\"'][^>]*>([\s\S]*?)<\/td>/gi)]
+    const category = decodeEntities(categoryMatches.at(-1)?.[1] || '') || '原價屋品項'
 
-    for (const optionMatch of options) {
+    for (const optionMatch of selectMatch[2].matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi)) {
       if (/\bdisabled\b/i.test(optionMatch[1])) continue
       const text = decodeEntities(optionMatch[2])
       const prices = [...text.matchAll(/\$(\d[\d,]*)/g)].map(match => Number(match[1].replace(/,/g, '')))

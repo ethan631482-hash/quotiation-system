@@ -13,7 +13,7 @@ const emptyQuote = () => ({
   number: `QT-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`,
   status: '草稿',
   date: today(),
-  company: { name: '您的公司名稱', phone: '', address: '' },
+  company: { name: '工程師名稱', phone: '', address: '' },
   customer: { name: '', phone: '', address: '', contact: '' },
   items: [blankItem()],
   discount: 0,
@@ -176,7 +176,7 @@ function App() {
     const tax = Math.round(Math.max(0, subtotal - Number(q.discount || 0)) * Number(q.taxRate || 0) / 100)
     const total = subtotal - Number(q.discount || 0) + tax
     const itemsHtml = q.items.map(it => `<tr><td>${it.category || ''}</td><td>${it.name || ''}</td><td>${it.spec || ''}</td><td style="text-align:right">${it.quantity || 0}</td><td style="text-align:right">${it.unitPrice || 0}</td><td style="text-align:right">${(Number(it.quantity||0)*Number(it.unitPrice||0)).toFixed(2)}</td></tr>`).join('')
-    const html = `<!doctype html><html><head><meta charset='utf-8'><title>${q.number}</title><meta name='viewport' content='width=device-width,initial-scale=1'><style>@page{size:A4;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;color:#111;font-family:Arial,'Microsoft JhengHei',sans-serif;font-size:10pt}body{width:194mm}.sheet{min-height:281mm;display:flex;flex-direction:column}.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:5px}.title{margin:0;font-size:20pt}.meta{font-size:9pt;text-align:right;line-height:1.5}.party{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px;font-size:9pt}.party section{border:1px solid #bbb;padding:5px;min-height:42px}.party b{display:block;margin-bottom:2px}.items{width:100%;border-collapse:collapse;margin-top:7px;font-size:8.5pt}.items th,.items td{border:1px solid #bbb;padding:3px 4px;vertical-align:top}.items th{background:#f3f4f6;text-align:left;white-space:nowrap}.right{text-align:right}.summary{margin:7px 0 0 auto;width:72mm;font-size:9pt}.summary div{display:flex;justify-content:space-between;padding:1px 0}.summary .total{border-top:1px solid #111;margin-top:3px;padding-top:3px;font-size:11pt;font-weight:700}.note{margin-top:6px;border-top:1px solid #bbb;padding-top:4px;font-size:8.5pt;white-space:pre-wrap}.signatures{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:16mm;padding-top:8px;font-size:10pt}.signatures div{display:flex;align-items:flex-end;gap:4px}.signatures span{display:inline-block;flex:1;height:15mm;border-bottom:1px solid #111}</style></head><body><main class='sheet'><header class='top'><div><h1 class='title'>報價單</h1><div>${q.company?.name || ''}</div></div><div class='meta'><div>報價編號：${q.number}</div><div>日期：${q.date}</div></div></header><div class='party'><section><b>報價公司</b><div>${q.company?.name || ''}</div><div>${q.company?.phone || ''}</div><div>${q.company?.address || ''}</div></section><section><b>客戶資料</b><div>${q.customer?.name || ''}</div><div>${q.customer?.contact ? '聯絡人：' + q.customer.contact : ''}</div><div>${q.customer?.phone || ''}</div><div>${q.customer?.address || ''}</div></section></div><table class='items'><thead><tr><th>類別</th><th>品名</th><th>規格</th><th class='right'>數量</th><th class='right'>單價</th><th class='right'>小計</th></tr></thead><tbody>${itemsHtml}</tbody></table><section class='summary'><div><span>小計</span><span>${formatCurrency(subtotal)}</span></div><div><span>折扣</span><span>${formatCurrency(Number(q.discount || 0))}</span></div><div><span>稅額</span><span>${formatCurrency(tax)}</span></div><div class='total'><span>總額</span><span>${formatCurrency(total)}</span></div></section>${q.note ? `<section class='note'><b>備註：</b>${q.note}</section>` : ''}<section class='signatures'><div><b>客戶簽收：</b><span></span></div><div><b>簽收日期：</b><span></span></div></section></main></body></html>`
+    const html = `<!doctype html><html><head><meta charset='utf-8'><title>${q.number}</title><meta name='viewport' content='width=device-width,initial-scale=1'><style>@page{size:A4;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;color:#111;font-family:Arial,'Microsoft JhengHei',sans-serif;font-size:10pt}body{width:194mm}.sheet{min-height:281mm;display:flex;flex-direction:column}.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:5px}.title{margin:0;font-size:20pt}.meta{font-size:9pt;text-align:right;line-height:1.5}.party{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px;font-size:9pt}.party section{border:1px solid #bbb;padding:5px;min-height:42px}.party b{display:block;margin-bottom:2px}.items{width:100%;border-collapse:collapse;margin-top:7px;font-size:8.5pt}.items th,.items td{border:1px solid #bbb;padding:3px 4px;vertical-align:top}.items th{background:#f3f4f6;text-align:left;white-space:nowrap}.right{text-align:right}.summary{margin:7px 0 0 auto;width:72mm;font-size:9pt}.summary div{display:flex;justify-content:space-between;padding:1px 0}.summary .total{border-top:1px solid #111;margin-top:3px;padding-top:3px;font-size:11pt;font-weight:700}.note{margin-top:6px;border-top:1px solid #bbb;padding-top:4px;font-size:8.5pt;white-space:pre-wrap}.signatures{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:16mm;padding-top:8px;font-size:10pt}.signatures div{display:flex;align-items:flex-end;gap:4px}.signatures span{display:inline-block;flex:1;height:15mm;border-bottom:1px solid #111}</style></head><body><main class='sheet'><header class='top'><div><h1 class='title'>報價單</h1><div>${q.company?.name || ''}</div></div><div class='meta'><div>報價編號：${q.number}</div><div>日期：${q.date}</div></div></header><div class='party'><section><b>工程師資料</b><div>${q.company?.name || ''}</div><div>${q.company?.phone || ''}</div><div>${q.company?.address || ''}</div></section><section><b>客戶資料</b><div>${q.customer?.name || ''}</div><div>${q.customer?.contact ? '聯絡人：' + q.customer.contact : ''}</div><div>${q.customer?.phone || ''}</div><div>${q.customer?.address || ''}</div></section></div><table class='items'><thead><tr><th>類別</th><th>品名</th><th>規格</th><th class='right'>數量</th><th class='right'>單價</th><th class='right'>小計</th></tr></thead><tbody>${itemsHtml}</tbody></table><section class='summary'><div><span>小計</span><span>${formatCurrency(subtotal)}</span></div><div><span>折扣</span><span>${formatCurrency(Number(q.discount || 0))}</span></div><div><span>稅額</span><span>${formatCurrency(tax)}</span></div><div class='total'><span>總額</span><span>${formatCurrency(total)}</span></div></section>${q.note ? `<section class='note'><b>備註：</b>${q.note}</section>` : ''}<section class='signatures'><div><b>客戶簽收：</b><span></span></div><div><b>簽收日期：</b><span></span></div></section></main></body></html>`
     const win = window.open('about:blank', '_blank')
     if (!win) return showNotice('無法開啟新視窗，請允許跳出視窗後重試。')
     win.document.write(html)
@@ -372,11 +372,11 @@ function QuoteEditor({ quote, categories, customers, subtotal, discount, tax, to
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-5">
       <section className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 print:grid-cols-2 print:border-0 print:shadow-none">
         <div>
-          <h3 className="mb-4 font-semibold">報價單位資料</h3>
+          <h3 className="mb-4 font-semibold">工程師資料</h3>
           <div className="grid gap-3">
-            <Field label="公司名稱"><Input value={quote.company.name} onChange={event => updateQuote('company.name', event.target.value)} /></Field>
+            <Field label="工程師名稱"><Input value={quote.company.name} onChange={event => updateQuote('company.name', event.target.value)} /></Field>
             <Field label="聯絡電話"><Input value={quote.company.phone} onChange={event => updateQuote('company.phone', event.target.value)} /></Field>
-            <Field label="公司地址"><Input value={quote.company.address} onChange={event => updateQuote('company.address', event.target.value)} /></Field>
+            <Field label="工程師地址"><Input value={quote.company.address} onChange={event => updateQuote('company.address', event.target.value)} /></Field>
           </div>
         </div>
         <div>
@@ -391,7 +391,7 @@ function QuoteEditor({ quote, categories, customers, subtotal, discount, tax, to
                 {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}{customer.contact ? `・${customer.contact}` : ''}</option>)}
               </select>
             </Field>
-            <Field label="客戶名稱"><Input placeholder="請輸入公司或姓名" value={quote.customer.name} onChange={event => updateQuote('customer.name', event.target.value)} /></Field>
+            <Field label="客戶名稱"><Input placeholder="請輸入客戶名稱或姓名" value={quote.customer.name} onChange={event => updateQuote('customer.name', event.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3"><Field label="聯絡人"><Input value={quote.customer.contact} onChange={event => updateQuote('customer.contact', event.target.value)} /></Field><Field label="聯絡電話"><Input value={quote.customer.phone} onChange={event => updateQuote('customer.phone', event.target.value)} /></Field></div>
             <Field label="客戶地址"><Input value={quote.customer.address} onChange={event => updateQuote('customer.address', event.target.value)} /></Field>
           </div>
@@ -432,7 +432,7 @@ function HistoryView({ quotes, onSelect, onNew, onDelete, onExportCSV, onExportP
         <p className="mt-1 text-sm text-slate-500">已儲存的報價單會保留在本機 JSON 檔。</p>
       </div>
       <div className="flex w-full items-center gap-2 sm:w-auto">
-        <Input placeholder="搜尋：客戶名稱、報價編號或公司" value={query} onChange={e => setQuery(e.target.value)} className="mr-2" />
+        <Input placeholder="搜尋：客戶名稱、報價編號或工程師" value={query} onChange={e => setQuery(e.target.value)} className="mr-2" />
         <div className="flex items-center gap-2">
           <Button size="sm" variant={viewMode === 'list' ? undefined : 'outline'} onClick={() => setViewMode('list')}>清單</Button>
           <Button size="sm" variant={viewMode === 'table' ? undefined : 'outline'} onClick={() => setViewMode('table')}>表格</Button>
@@ -469,7 +469,7 @@ function HistoryView({ quotes, onSelect, onNew, onDelete, onExportCSV, onExportP
       <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr>
         <th className="px-4 py-3">報價編號</th>
         <th className="px-4 py-3">客戶</th>
-        <th className="px-4 py-3">公司</th>
+        <th className="px-4 py-3">工程師</th>
         <th className="px-4 py-3">日期</th>
         <th className="px-4 py-3 text-right">金額</th>
         <th className="px-4 py-3">狀態</th>

@@ -34,6 +34,8 @@ function App() {
   const [categoryDraft, setCategoryDraft] = useState(initialCategories)
   const [newCategory, setNewCategory] = useState('')
   const [customers, setCustomers] = useState(initialCustomers)
+  const [products, setProducts] = useState([])
+  const [isImportingProducts, setIsImportingProducts] = useState(false)
   const [customerDraft, setCustomerDraft] = useState(initialCustomers)
   const [newCustomer, setNewCustomer] = useState({ name: '', contact: '', phone: '', address: '' })
   const [activeTab, setActiveTab] = useState('edit')
@@ -62,20 +64,38 @@ function App() {
       setCategoryDraft(data.categories)
       setCustomers(data.customers)
       setCustomerDraft(data.customers)
+      setProducts(Array.isArray(data.products) ? data.products : [])
     }).catch(() => showNotice('無法讀取伺服器資料，暫時顯示預設資料。'))
   }, [])
-  const saveData = async ({ nextQuotes = quotes, nextCategories = categories, nextCustomers = customers } = {}) => {
+  const saveData = async ({ nextQuotes = quotes, nextCategories = categories, nextCustomers = customers, nextProducts = products } = {}) => {
     try {
       const response = await fetch('/api/data', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quotes: nextQuotes, categories: nextCategories, customers: nextCustomers }),
+        body: JSON.stringify({ quotes: nextQuotes, categories: nextCategories, customers: nextCustomers, products: nextProducts }),
       })
       if (!response.ok) throw new Error('save failed')
       return true
     } catch {
       showNotice('儲存失敗，請確認伺服器連線與存取權限。')
       return false
+    }
+  }
+  const importCoolpcProducts = async () => {
+    if (isImportingProducts) return
+    setIsImportingProducts(true)
+    try {
+      const response = await fetch('/api/coolpc')
+      if (!response.ok) throw new Error('import failed')
+      const data = await response.json()
+      if (!Array.isArray(data.products) || !data.products.length) throw new Error('no products')
+      if (!await saveData({ nextProducts: data.products })) return
+      setProducts(data.products)
+      showNotice('原價屋品項已更新，共 ' + data.products.length.toLocaleString() + ' 筆。')
+    } catch {
+      showNotice('無法取得原價屋品項，請稍後再試。')
+    } finally {
+      setIsImportingProducts(false)
     }
   }
   const updateQuote = (path, value) => {
@@ -209,7 +229,7 @@ function App() {
       {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onExportCSV={() => exportCSV(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
       {activeTab === 'categories' && <CategoryManager categories={categoryDraft} newCategory={newCategory} onNewCategory={setNewCategory} onAdd={addCategory} onUpdate={(index, value) => setCategoryDraft(current => current.map((category, categoryIndex) => categoryIndex === index ? value : category))} onRemove={index => setCategoryDraft(current => current.filter((_, categoryIndex) => categoryIndex !== index))} onSave={saveCategories} />}
       {activeTab === 'customers' && <CustomerManager customers={customerDraft} newCustomer={newCustomer} onNewCustomer={setNewCustomer} onAdd={addCustomer} onUpdate={(index, value) => setCustomerDraft(current => current.map((c, i) => i === index ? value : c))} onRemove={index => setCustomerDraft(current => current.filter((_, i) => i !== index))} onSave={saveCustomers} />}
-      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} />}
+      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} isImportingProducts={isImportingProducts} />}
     </div>
   </main>
 }
@@ -368,20 +388,20 @@ function TabButton({ active, onClick, icon, children }) {
   </button>
 }
 
-function QuoteEditor({ quote, quotes, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem }) {
+function QuoteEditor({ quote, quotes, products, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem, onImportProducts, isImportingProducts }) {
   const productOptions = useMemo(() => {
     const unique = new Map()
-    quotes.forEach(savedQuote => (savedQuote.items || []).forEach(product => {
+    ;[...products, ...quotes.flatMap(savedQuote => savedQuote.items || [])].forEach(product => {
       if (!product.name || !product.name.trim()) return
       const key = [product.category || '', product.name, product.spec || '', product.unitPrice || 0].join('::')
       if (!unique.has(key)) unique.set(key, product)
-    }))
+    })
     return [...unique.values()]
-  }, [quotes])
+  }, [products, quotes])
 
 
   return <>
-    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><h2 className="text-2xl font-bold">報價單</h2></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
+    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold">報價單</h2><Button type="button" variant="outline" size="sm" className="print:hidden" disabled={isImportingProducts} onClick={onImportProducts}>{isImportingProducts ? '更新中…' : '更新原價屋品項'}</Button></div></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-5">
       <section className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 print:grid-cols-2 print:border-0 print:shadow-none">
         <div>
@@ -419,7 +439,7 @@ function QuoteEditor({ quote, quotes, categories, customers, subtotal, discount,
 
 function ItemRow({ item, products, categories, onUpdate, onRemove }) {
   const hasLegacyCategory = item.category && !categories.includes(item.category)
-  return <tr className="border-t border-slate-100"><td className="p-2"><select aria-label="品項類別" className="h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={item.category} onChange={event => onUpdate(item.id, 'category', event.target.value)}><option value="">請選擇類別</option>{hasLegacyCategory && <option value={item.category}>{item.category}（舊類別）</option>}{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></td><td className="p-2"><Input list={'product-options-' + item.id} className="h-9" placeholder="輸入或選擇品名" value={item.name} onChange={event => { const name = event.target.value; const matched = products.find(product => product.name === name && (!item.category || product.category === item.category)); onUpdate(item.id, 'name', name); if (matched) { onUpdate(item.id, 'spec', matched.spec || ''); onUpdate(item.id, 'unitPrice', matched.unitPrice || 0) } }} /><datalist id={'product-options-' + item.id}>{products.filter(product => !item.category || product.category === item.category).map(product => <option key={[product.category, product.name, product.spec, product.unitPrice].join('::')} value={product.name}>{product.spec ? product.spec + ' · ' : ''}{formatCurrency(product.unitPrice)}</option>)}</datalist></td><td className="p-2"><Input className="h-9" value={item.spec} onChange={event => onUpdate(item.id, 'spec', event.target.value)} /></td><td className="p-2"><Input className="h-9 text-center" min="0" type="number" value={item.quantity} onChange={event => onUpdate(item.id, 'quantity', event.target.value)} /></td><td className="p-2"><Input className="h-9 text-right" min="0" type="number" value={item.unitPrice} onChange={event => onUpdate(item.id, 'unitPrice', event.target.value)} /></td><td className="px-4 text-right font-medium tabular-nums">{formatCurrency(Number(item.quantity || 0) * Number(item.unitPrice || 0))}</td><td className="pr-2 print:hidden"><button aria-label="刪除品項" onClick={() => onRemove(item.id)} className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button></td></tr>
+  return <tr className="border-t border-slate-100"><td className="p-2"><select aria-label="品項類別" className="h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={item.category} onChange={event => onUpdate(item.id, 'category', event.target.value)}><option value="">請選擇類別</option>{hasLegacyCategory && <option value={item.category}>{item.category}（舊類別）</option>}{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></td><td className="p-2"><Input list={'product-options-' + item.id} className="h-9" placeholder="輸入或選擇品名" value={item.name} onChange={event => { const name = event.target.value; const matched = products.find(product => product.name === name); onUpdate(item.id, 'name', name); if (matched) { onUpdate(item.id, 'spec', matched.spec || ''); onUpdate(item.id, 'unitPrice', matched.unitPrice || 0) } }} /><datalist id={'product-options-' + item.id}>{products.map(product => <option key={[product.category, product.name, product.spec, product.unitPrice].join('::')} value={product.name}>{product.spec ? product.spec + ' · ' : ''}{formatCurrency(product.unitPrice)}</option>)}</datalist></td><td className="p-2"><Input className="h-9" value={item.spec} onChange={event => onUpdate(item.id, 'spec', event.target.value)} /></td><td className="p-2"><Input className="h-9 text-center" min="0" type="number" value={item.quantity} onChange={event => onUpdate(item.id, 'quantity', event.target.value)} /></td><td className="p-2"><Input className="h-9 text-right" min="0" type="number" value={item.unitPrice} onChange={event => onUpdate(item.id, 'unitPrice', event.target.value)} /></td><td className="px-4 text-right font-medium tabular-nums">{formatCurrency(Number(item.quantity || 0) * Number(item.unitPrice || 0))}</td><td className="pr-2 print:hidden"><button aria-label="刪除品項" onClick={() => onRemove(item.id)} className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={16} /></button></td></tr>
 }
 
 function CategoryManager({ categories, newCategory, onNewCategory, onAdd, onUpdate, onRemove, onSave }) {

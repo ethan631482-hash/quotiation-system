@@ -98,6 +98,29 @@ function App() {
       setIsImportingProducts(false)
     }
   }
+  const importProductsFile = async event => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text())
+      const incoming = Array.isArray(parsed) ? parsed : parsed.products
+      if (!Array.isArray(incoming) || !incoming.length) throw new Error('找不到品項清單')
+      const normalized = incoming.map(product => ({
+        category: String(product.category || '原價屋品項').trim(),
+        name: String(product.name || '').trim(),
+        spec: String(product.spec || '').trim(),
+        unitPrice: Number(product.unitPrice || 0),
+      })).filter(product => product.name)
+      if (!normalized.length) throw new Error('品項格式不正確')
+      if (!await saveData({ nextProducts: normalized })) return
+      setProducts(normalized)
+      showNotice('已匯入 ' + normalized.length.toLocaleString() + ' 筆品項。')
+    } catch (error) {
+      showNotice('品項匯入失敗：' + (error.message || '請選擇正確的 JSON 檔案。'))
+    } finally {
+      event.target.value = ''
+    }
+  }
   const updateQuote = (path, value) => {
     const [group, key] = path.split('.')
     if (key) setQuote(current => ({ ...current, [group]: { ...current[group], [key]: value } }))
@@ -229,7 +252,7 @@ function App() {
       {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onExportCSV={() => exportCSV(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
       {activeTab === 'categories' && <CategoryManager categories={categoryDraft} newCategory={newCategory} onNewCategory={setNewCategory} onAdd={addCategory} onUpdate={(index, value) => setCategoryDraft(current => current.map((category, categoryIndex) => categoryIndex === index ? value : category))} onRemove={index => setCategoryDraft(current => current.filter((_, categoryIndex) => categoryIndex !== index))} onSave={saveCategories} />}
       {activeTab === 'customers' && <CustomerManager customers={customerDraft} newCustomer={newCustomer} onNewCustomer={setNewCustomer} onAdd={addCustomer} onUpdate={(index, value) => setCustomerDraft(current => current.map((c, i) => i === index ? value : c))} onRemove={index => setCustomerDraft(current => current.filter((_, i) => i !== index))} onSave={saveCustomers} />}
-      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} isImportingProducts={isImportingProducts} />}
+      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} onImportFile={importProductsFile} isImportingProducts={isImportingProducts} />}
     </div>
   </main>
 }
@@ -388,7 +411,7 @@ function TabButton({ active, onClick, icon, children }) {
   </button>
 }
 
-function QuoteEditor({ quote, quotes, products, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem, onImportProducts, isImportingProducts }) {
+function QuoteEditor({ quote, quotes, products, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem, onImportProducts, onImportFile, isImportingProducts }) {
   const productOptions = useMemo(() => {
     const unique = new Map()
     ;[...products, ...quotes.flatMap(savedQuote => savedQuote.items || [])].forEach(product => {
@@ -401,7 +424,7 @@ function QuoteEditor({ quote, quotes, products, categories, customers, subtotal,
 
 
   return <>
-    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold">報價單</h2><Button type="button" variant="outline" size="sm" className="print:hidden" disabled={isImportingProducts} onClick={onImportProducts}>{isImportingProducts ? '更新中…' : '更新原價屋品項'}</Button></div></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
+    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold">報價單</h2><Button type="button" variant="outline" size="sm" className="print:hidden" disabled={isImportingProducts} onClick={onImportProducts}>{isImportingProducts ? '更新中…' : '更新原價屋品項'}</Button><label className="cursor-pointer rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 print:hidden">匯入品項 JSON<input className="sr-only" type="file" accept="application/json,.json" onChange={onImportFile} /></label></div></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-5">
       <section className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 print:grid-cols-2 print:border-0 print:shadow-none">
         <div>

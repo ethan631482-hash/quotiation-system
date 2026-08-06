@@ -50,15 +50,16 @@ export default async function handler(request, response) {
   try {
     const upstream = await fetch(COOLPC_URL, {
       headers: {
-        'User-Agent': 'Quotation-System/1.0 (product catalog update)',
-        Accept: 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+        Referer: 'https://coolpc.com.tw/',
       },
     })
     if (!upstream.ok) throw new Error('CoolPC returned ' + upstream.status)
 
     const buffer = await upstream.arrayBuffer()
     const html = new TextDecoder('big5').decode(buffer)
-    console.log('CoolPC response', upstream.status, upstream.url, upstream.headers.get('content-type'), buffer.byteLength, html.slice(0, 200))
     const products = parseProducts(html)
     if (!products.length) throw new Error('No products parsed')
 

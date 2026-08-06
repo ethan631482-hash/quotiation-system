@@ -36,6 +36,7 @@ function App() {
   const [customers, setCustomers] = useState(initialCustomers)
   const [products, setProducts] = useState([])
   const [isImportingProducts, setIsImportingProducts] = useState(false)
+  const [catalogJson, setCatalogJson] = useState('')
   const [customerDraft, setCustomerDraft] = useState(initialCustomers)
   const [newCustomer, setNewCustomer] = useState({ name: '', contact: '', phone: '', address: '' })
   const [activeTab, setActiveTab] = useState('edit')
@@ -119,6 +120,21 @@ function App() {
       showNotice('品項匯入失敗：' + (error.message || '請選擇正確的 JSON 檔案。'))
     } finally {
       event.target.value = ''
+    }
+  }
+  const importCatalogText = async () => {
+    try {
+      const parsed = JSON.parse(catalogJson)
+      const incoming = Array.isArray(parsed) ? parsed : parsed.products
+      if (!Array.isArray(incoming) || !incoming.length) throw new Error('找不到品項清單')
+      const normalized = incoming.map(product => ({ category: String(product.category || '原價屋品項').trim(), name: String(product.name || '').trim(), spec: String(product.spec || '').trim(), unitPrice: Number(product.unitPrice || 0) })).filter(product => product.name)
+      if (!normalized.length) throw new Error('品項格式不正確')
+      if (!await saveData({ nextProducts: normalized })) return
+      setProducts(normalized)
+      setCatalogJson('')
+      showNotice('已匯入 ' + normalized.length.toLocaleString() + ' 筆品項。')
+    } catch (error) {
+      showNotice('品項匯入失敗：' + (error.message || '請貼上正確的 JSON 資料。'))
     }
   }
   const updateQuote = (path, value) => {
@@ -252,7 +268,7 @@ function App() {
       {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onExportCSV={() => exportCSV(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
       {activeTab === 'categories' && <CategoryManager categories={categoryDraft} newCategory={newCategory} onNewCategory={setNewCategory} onAdd={addCategory} onUpdate={(index, value) => setCategoryDraft(current => current.map((category, categoryIndex) => categoryIndex === index ? value : category))} onRemove={index => setCategoryDraft(current => current.filter((_, categoryIndex) => categoryIndex !== index))} onSave={saveCategories} />}
       {activeTab === 'customers' && <CustomerManager customers={customerDraft} newCustomer={newCustomer} onNewCustomer={setNewCustomer} onAdd={addCustomer} onUpdate={(index, value) => setCustomerDraft(current => current.map((c, i) => i === index ? value : c))} onRemove={index => setCustomerDraft(current => current.filter((_, i) => i !== index))} onSave={saveCustomers} />}
-      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} onImportFile={importProductsFile} isImportingProducts={isImportingProducts} />}
+      {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} onImportFile={importProductsFile} catalogJson={catalogJson} onCatalogJson={setCatalogJson} onImportText={importCatalogText} isImportingProducts={isImportingProducts} />}
     </div>
   </main>
 }
@@ -411,7 +427,7 @@ function TabButton({ active, onClick, icon, children }) {
   </button>
 }
 
-function QuoteEditor({ quote, quotes, products, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem, onImportProducts, onImportFile, isImportingProducts }) {
+function QuoteEditor({ quote, quotes, products, categories, customers, subtotal, discount, tax, total, balance, updateQuote, updateItem, removeItem, addItem, onImportProducts, onImportFile, catalogJson, onCatalogJson, onImportText, isImportingProducts }) {
   const productOptions = useMemo(() => {
     const unique = new Map()
     ;[...products, ...quotes.flatMap(savedQuote => savedQuote.items || [])].forEach(product => {
@@ -424,7 +440,7 @@ function QuoteEditor({ quote, quotes, products, categories, customers, subtotal,
 
 
   return <>
-    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold">報價單</h2><Button type="button" variant="outline" size="sm" className="print:hidden" disabled={isImportingProducts} onClick={onImportProducts}>{isImportingProducts ? '更新中…' : '更新原價屋品項'}</Button><label className="cursor-pointer rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 print:hidden">匯入品項 JSON<input className="sr-only" type="file" accept="application/json,.json" onChange={onImportFile} /></label></div></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
+    <section className="mb-5 flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end print:border-0 print:shadow-none"><div><p className="mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Quotation</p><div className="flex flex-wrap items-center gap-3"><h2 className="text-2xl font-bold">報價單</h2><Button type="button" variant="outline" size="sm" className="print:hidden" disabled={isImportingProducts} onClick={onImportProducts}>{isImportingProducts ? '更新中…' : '更新原價屋品項'}</Button><label className="cursor-pointer rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 print:hidden">匯入品項 JSON<input className="sr-only" type="file" accept="application/json,.json" onChange={onImportFile} /></label><details className="print:hidden"><summary className="cursor-pointer rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">貼上品項 JSON</summary><div className="mt-2 w-full space-y-2"><textarea className="min-h-28 w-full rounded-md border border-slate-200 p-2 text-xs" value={catalogJson} onChange={event => onCatalogJson(event.target.value)} placeholder="貼上從原價屋取得的 JSON 品項資料" /><Button type="button" size="sm" onClick={onImportText}>匯入貼上資料</Button></div></details></div></div><div className="grid grid-cols-2 gap-3 sm:w-[390px]"><Field label="報價單編號"><Input value={quote.number} onChange={event => updateQuote('number', event.target.value)} /></Field><Field label="報價日期"><Input type="date" value={quote.date} onChange={event => updateQuote('date', event.target.value)} /></Field></div></section>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"><div className="space-y-5">
       <section className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2 print:grid-cols-2 print:border-0 print:shadow-none">
         <div>

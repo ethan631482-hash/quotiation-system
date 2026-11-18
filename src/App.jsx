@@ -210,25 +210,30 @@ function App() {
     showNotice('客戶名單已儲存至伺服器。')
   }
 
-  const exportCSV = (quotesToExport) => {
+    const exportExcel = (quotesToExport) => {
     if (!quotesToExport || !quotesToExport.length) return showNotice('沒有報價可匯出。')
-    const headers = ['id','number','status','date','company_name','customer_name','customer_contact','subtotal','discount','taxRate','deposit','total','note','items']
+    const headers = ['報價單編號', '狀態', '報價日期', '工程師名稱', '客戶名稱', '客戶聯絡人', '小計', '折扣', '稅率', '訂金', '報價總額', '備註', '報價品項']
     const rows = quotesToExport.map(q => {
-      const subtotal = q.items.reduce((sum, it) => sum + Number(it.quantity || 0) * Number(it.unitPrice || 0), 0)
+      const subtotal = q.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0)
       const tax = Math.round(Math.max(0, subtotal - Number(q.discount || 0)) * Number(q.taxRate || 0) / 100)
       const total = subtotal - Number(q.discount || 0) + tax
-      const itemsText = q.items.map(i => `${i.category || ''}|${i.name || ''}|${i.spec || ''}|${i.quantity || 0}|${i.unitPrice || 0}`).join(' || ')
-      return [q.id, q.number, q.status, q.date, q.company?.name || '', q.customer?.name || '', q.customer?.contact || '', subtotal, q.discount || 0, q.taxRate || 0, q.deposit || 0, total, q.note || '', itemsText]
+      const items = q.items.map(item => [item.category || '', item.name || '', item.spec || '', item.quantity || 0, item.unitPrice || 0].join(' | ')).join(' / ')
+      return [q.number, q.status, q.date, q.company?.name || '', q.customer?.name || '', q.customer?.contact || '', subtotal, q.discount || 0, q.taxRate || 0, q.deposit || 0, total, q.note || '', items]
     })
-    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','))].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]))
+    const cells = values => values.map(value => '<td>' + escape(value) + '</td>').join('')
+    const table = '<table border="1"><thead><tr>' + headers.map(header => '<th>' + escape(header) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(row => '<tr>' + cells(row) + '</tr>').join('') + '</tbody></table>'
+    const html = '<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="application/vnd.ms-excel; charset=utf-8"></head><body>' + table + '</body></html>'
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `quotes_${new Date().toISOString().slice(0,10)}.csv`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '報價紀錄_' + new Date().toISOString().slice(0, 10) + '.xls'
+    link.click()
     URL.revokeObjectURL(url)
+    showNotice('Excel 檔案已匯出。')
   }
+
 
   const exportQuoteAsPDF = (q) => {
     if (!q) return showNotice('請先選取要匯出的報價單。')
@@ -265,7 +270,7 @@ function App() {
         <TabButton active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={16} />}>客戶管理 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{customers.length}</span></TabButton>
       </nav>
       {activeTab === 'dashboard' && <Dashboard quotes={quotes} customers={customers} />}
-      {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onExportCSV={() => exportCSV(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
+      {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onExportExcel={() => exportExcel(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
       {activeTab === 'categories' && <CategoryManager categories={categoryDraft} newCategory={newCategory} onNewCategory={setNewCategory} onAdd={addCategory} onUpdate={(index, value) => setCategoryDraft(current => current.map((category, categoryIndex) => categoryIndex === index ? value : category))} onRemove={index => setCategoryDraft(current => current.filter((_, categoryIndex) => categoryIndex !== index))} onSave={saveCategories} />}
       {activeTab === 'customers' && <CustomerManager customers={customerDraft} newCustomer={newCustomer} onNewCustomer={setNewCustomer} onAdd={addCustomer} onUpdate={(index, value) => setCustomerDraft(current => current.map((c, i) => i === index ? value : c))} onRemove={index => setCustomerDraft(current => current.filter((_, i) => i !== index))} onSave={saveCustomers} />}
       {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} onImportFile={importProductsFile} catalogJson={catalogJson} onCatalogJson={setCatalogJson} onImportText={importCatalogText} isImportingProducts={isImportingProducts} />}
@@ -487,7 +492,7 @@ function CategoryManager({ categories, newCategory, onNewCategory, onAdd, onUpda
 
 function Summary({ label, value, strong }) { return <div className={cn('flex items-center justify-between', strong && 'text-base font-bold text-blue-700')}><span className={strong ? '' : 'text-slate-600'}>{label}</span><span className="tabular-nums">{formatCurrency(value)}</span></div> }
 
-function HistoryView({ quotes, onSelect, onNew, onDelete, onExportCSV, onExportPDF }) {
+function HistoryView({ quotes, onSelect, onNew, onDelete, onExportExcel, onExportPDF }) {
   const [viewMode, setViewMode] = useState('list')
   const [query, setQuery] = useState('')
 
@@ -509,7 +514,7 @@ function HistoryView({ quotes, onSelect, onNew, onDelete, onExportCSV, onExportP
         <div className="flex items-center gap-2">
           <Button size="sm" variant={viewMode === 'list' ? undefined : 'outline'} onClick={() => setViewMode('list')}>清單</Button>
           <Button size="sm" variant={viewMode === 'table' ? undefined : 'outline'} onClick={() => setViewMode('table')}>表格</Button>
-          <Button variant="outline" onClick={onExportCSV} className="print:hidden"><FileText size={16} />匯出 CSV</Button>
+          <Button variant="outline" onClick={onExportExcel} className="print:hidden"><FileText size={16} />匯出 Excel</Button>
           <Button onClick={onNew}><Plus size={16} />新增報價</Button>
         </div>
       </div>

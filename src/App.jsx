@@ -163,7 +163,7 @@ function App() {
     showNotice('報價單已刪除。')
   }
 
-const markQuoteWon = async item => {
+  const markQuoteWon = async item => {
     if (item.status === '已成交') return
     const updatedItem = { ...item, status: '已成交', updatedAt: new Date().toISOString() }
     const updated = quotes.map(current => current.id === item.id ? updatedItem : current)
@@ -173,7 +173,7 @@ const markQuoteWon = async item => {
     showNotice(`報價單 ${item.number} 已標記為成交。`)
   }
 
-  const addCategory
+  const addCategory = () => {
     const name = newCategory.trim()
     if (!name) return
     if (categoryDraft.some(category => category.toLocaleLowerCase() === name.toLocaleLowerCase())) return showNotice('此類別已存在。')
@@ -275,12 +275,12 @@ const markQuoteWon = async item => {
       <nav className="mb-5 flex gap-1 border-b border-slate-200 print:hidden" aria-label="報價單功能">
         <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<BarChart3 size={16} />}>商務儀表板</TabButton>
         <TabButton active={activeTab === 'edit'} onClick={() => setActiveTab('edit')} icon={<FileText size={16} />}>編輯報價單</TabButton>
-              {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onMarkWon={markQuoteWon} onExportExcel={() => exportExcel(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
+        <TabButton active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History size={16} />}>報價紀錄 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{quotes.length}</span></TabButton>
         <TabButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<FolderCog size={16} />}>類別管理 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{categories.length}</span></TabButton>
         <TabButton active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<Users size={16} />}>客戶管理 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{customers.length}</span></TabButton>
       </nav>
       {activeTab === 'dashboard' && <Dashboard quotes={quotes} customers={customers} />}
-      {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onMarkWon={markQuoteWon}={() => exportExcel(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
+      {activeTab === 'history' && <HistoryView quotes={quotes} onSelect={selectQuote} onNew={newQuote} onDelete={deleteQuote} onMarkWon={markQuoteWon} onExportExcel={() => exportExcel(quotes)} onExportPDF={item => exportQuoteAsPDF(item)} />}
       {activeTab === 'categories' && <CategoryManager categories={categoryDraft} newCategory={newCategory} onNewCategory={setNewCategory} onAdd={addCategory} onUpdate={(index, value) => setCategoryDraft(current => current.map((category, categoryIndex) => categoryIndex === index ? value : category))} onRemove={index => setCategoryDraft(current => current.filter((_, categoryIndex) => categoryIndex !== index))} onSave={saveCategories} />}
       {activeTab === 'customers' && <CustomerManager customers={customerDraft} newCustomer={newCustomer} onNewCustomer={setNewCustomer} onAdd={addCustomer} onUpdate={(index, value) => setCustomerDraft(current => current.map((c, i) => i === index ? value : c))} onRemove={index => setCustomerDraft(current => current.filter((_, i) => i !== index))} onSave={saveCustomers} />}
       {activeTab === 'edit' && <QuoteEditor quote={quote} quotes={quotes} products={products} categories={categories} customers={customers} subtotal={subtotal} discount={discount} tax={tax} total={total} balance={balance} updateQuote={updateQuote} updateItem={updateItem} removeItem={removeItem} addItem={() => setQuote(current => ({ ...current, items: [...current.items, blankItem()] }))} onImportProducts={importCoolpcProducts} onImportFile={importProductsFile} catalogJson={catalogJson} onCatalogJson={setCatalogJson} onImportText={importCatalogText} isImportingProducts={isImportingProducts} />}
@@ -502,7 +502,7 @@ function CategoryManager({ categories, newCategory, onNewCategory, onAdd, onUpda
 
 function Summary({ label, value, strong }) { return <div className={cn('flex items-center justify-between', strong && 'text-base font-bold text-blue-700')}><span className={strong ? '' : 'text-slate-600'}>{label}</span><span className="tabular-nums">{formatCurrency(value)}</span></div> }
 
-function function HistoryView({ quotes, onSelect, onNew, onDelete, onMarkWon, onExportExcel, onExportPDF }) {
+function HistoryView({ quotes, onSelect, onNew, onDelete, onMarkWon, onExportExcel, onExportPDF }) {
   const [viewMode, setViewMode] = useState('list')
   const [query, setQuery] = useState('')
 
@@ -547,7 +547,7 @@ function function HistoryView({ quotes, onSelect, onNew, onDelete, onMarkWon, on
             <p className="mt-2 font-semibold">{formatCurrency(quoteTotal)}</p>
           </div>
           <div className="print:hidden">
-                                  <td className="px-4 py-3 print:hidden"><div className="flex items-center gap-2"><button aria-label="列印報價單" onClick={() => onExportPDF(item)} className="rounded border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50">列印</button>{item.status !== '已成交' && <button onClick={() => onMarkWon(item)} className="rounded border border-emerald-200 bg-white px-3 py-1 text-sm text-emerald-700 hover:bg-emerald-50">成交</button>}<button aria-label={`刪除報價單 ${item.number}`} onClick={() => onDelete(item)} className="rounded border border-red-200 bg-white px-3 py-1 text-sm text-red-600 hover:bg-red-50">刪除</button></div></td>
+            <button aria-label="列印報價單" onClick={e => { e.stopPropagation(); onExportPDF(item) }} className="rounded border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"><Printer size={14} /></button>{item.status !== '已成交' && <button onClick={e => { e.stopPropagation(); onMarkWon(item) }} className="rounded border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">成交</button>}<button aria-label={`刪除報價單 ${item.number}`} onClick={e => { e.stopPropagation(); onDelete(item) }} className="rounded border border-red-200 bg-white px-3 py-2 text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>
           </div>
         </div>
       </div>
@@ -572,7 +572,7 @@ function function HistoryView({ quotes, onSelect, onNew, onDelete, onMarkWon, on
           <td className="px-4 py-3">{item.date}</td>
           <td className="px-4 py-3 text-right">{formatCurrency(quoteTotal)}</td>
           <td className="px-4 py-3">{item.status || '草稿'}</td>
-          <td className="px-4 py-3 print:hidden"><div className="flex items-center gap-2"><button aria-label="列印報價單" onClick={() => onExportPDF(item)} className="rounded border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50">列印</button><button aria-label={`刪除報價單 ${item.number}`} onClick={() => onDelete(item)} className="rounded border border-red-200 bg-white px-3 py-1 text-sm text-red-600 hover:bg-red-50">刪除</button></div></td>
+          <td className="px-4 py-3 print:hidden"><div className="flex items-center gap-2"><button aria-label="列印報價單" onClick={() => onExportPDF(item)} className="rounded border border-slate-200 bg-white px-3 py-1 text-sm hover:bg-slate-50">列印</button>{item.status !== '已成交' && <button onClick={() => onMarkWon(item)} className="rounded border border-emerald-200 bg-white px-3 py-1 text-sm text-emerald-700 hover:bg-emerald-50">成交</button>}<button aria-label={`刪除報價單 ${item.number}`} onClick={() => onDelete(item)} className="rounded border border-red-200 bg-white px-3 py-1 text-sm text-red-600 hover:bg-red-50">刪除</button></div></td>
         </tr>
       })}</tbody>
     </table></div>}
